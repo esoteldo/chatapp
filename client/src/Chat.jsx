@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from 'react'
+import React, { memo, useCallback, useEffect, useState } from 'react'
+import { ChatList } from './ChatList';
+import ScrollToBottom from 'react-scroll-to-bottom';
 
 export const Chat = ({socket,username,room}) => {
     const [currentMessage,setCurrentMessage]=useState("");
+    const [messageList,setMessageList]=useState([]);
 
-    const sendMessage= async()=>{
+    const sendMessage= useCallback(async()=>{
         if(currentMessage !==""){
             const message={
                 room:room,
@@ -12,29 +15,40 @@ export const Chat = ({socket,username,room}) => {
                 time:new Date(Date.now()).getHours()+":"+
                 new Date(Date.now()).getMinutes(),
             }
+            setMessageList((list)=>[...list,message])
             await socket.emit("send_message",message)
-
+            setCurrentMessage("")
+            
         }
-    }
+    })
 
     useEffect(() => {
       socket.on("send_message",(data)=>{
-        console.log(data)
+        setMessageList((list)=>[...list,data])
       }) 
       
     }, [socket])
     
 
   return (
-    <div>
+    <div className='chat-window'>
         <div className='chat-header'>
             <p>Live Chat</p>
         </div>
-        <div className='chat-body'></div>
+        <div className='chat-body'>
+          <ScrollToBottom className='message-container'>
+
+          {messageList.map((message,id)=>{
+            return <ChatList key={id} usuario={username} mensaje={message.message} tiempo={message.time} autor={message.username} />
+          })}
+          </ScrollToBottom>
+        </div>
         <div className='chat-footer'>
         <input type="text" aria-placeholder='Hey...' 
         value={currentMessage}
-        onChange={(e)=>{setCurrentMessage(e.target.value)}}/>
+        onChange={(e)=>{setCurrentMessage(e.target.value)}}
+        onKeyPress={(e)=>{e.key==="Enter" && sendMessage()}}/>
+
         <button onClick={sendMessage}>&#9658;</button>
         </div>
     </div>
